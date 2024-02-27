@@ -34,7 +34,6 @@ var helpMessage string = `Commands:
 
 // Main Function
 func main() {
-
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + Token)
 	if err != nil {
@@ -44,6 +43,9 @@ func main() {
 
 	// Register the messageCreate func as a callback for MessageCreate events.
 	dg.AddHandler(messageCreate)
+
+	// Kickoff the reminder thread
+	go initReminders(dg)
 
 	// In this example, we only care about receiving message events.
 	dg.Identify.Intents = discordgo.IntentsGuildMessages
@@ -62,11 +64,6 @@ func main() {
 	<-sc
 
 	dg.Close()
-}
-
-// A Struct for grabbing the Joke from a json object returned from API
-type Joke struct {
-	Joke string `json: "joke"`
 }
 
 // This function will be called (due to AddHandler above) every time a new
@@ -89,7 +86,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	//nextActivity Command
 	if m.Content == "!nextActivity" {
-		_, err := s.ChannelMessageSend(m.ChannelID, findNextActivity())
+		_, err := s.ChannelMessageSend(m.ChannelID, findNextActivity().GoString())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -97,8 +94,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	//nextLesson Command
 	if m.Content == "!nextLesson" {
-		fmt.Println("next lesson called")
-		_, err := s.ChannelMessageSend(m.ChannelID, findNextLesson())
+		_, err := s.ChannelMessageSend(m.ChannelID, findNextLesson().GoString())
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -114,38 +110,134 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-// Function to find the next activity information and format it as a string
-func findNextActivity() string {
-	//String to be filled
-	var outputString = ""
-	//Find the next wednesday
-	//Get current day
-	now := time.Now()
-	//Find current weekday
-	weekday := int(time.Now().Weekday())
-	//Default to current day, if it is not a wednesday we will change it
-	nextDate := time.Now()
-	//Days before wednesday
-	if weekday < 3 {
-		nextDate = now.AddDate(0, 0, 3-int(weekday))
-	} else if weekday > 3 {
-		nextDate = now.AddDate(0, 0, 10-int(weekday))
+// A Struct for grabbing the Joke from a json object returned from API
+type Joke struct {
+	Joke string `json: "joke"`
+}
+
+func initReminders(s *discordgo.Session) {
+	// Channel ID for the channel to be posted in
+	channelID := "1208196655170715698"
+
+	// Wednesday reminder go out 5 hours before
+	wedAnticipation := 5 * time.Hour
+
+	// Sunday reminders go out a day before
+	sunAnticipation := 24 * time.Hour
+
+	// Find the local time for later calculaiton
+	currentTime := time.Now().Local()
+
+	// Find the next lesson and activity
+	wedReminderTime := findNextActivity()
+	sunReminderTime := findNextLesson()
+
+	// Calculate times between activities and lessons
+	wedToSun := sunReminderTime.Sub(wedReminderTime)
+	sunToWed := wedReminderTime.Sub(sunReminderTime)
+
+	// Find which one is next
+	if wedReminderTime.Before(sunReminderTime) {
+		// Calculate time until next activiy and sleep until then
+		time.Sleep(wedReminderTime.Sub(currentTime) - wedAnticipation)
+
+		//Send the proper reminder
+		sendWedReminder(s, channelID)
+	} else {
+		// Calculate time until next lesson and sleep until then
+		time.Sleep(sunReminderTime.Sub(currentTime) - sunAnticipation)
+
+		// Send the proper reminder
+		sendSunReminder(s, channelID)
+
 	}
 
-	//Find the corresponding entry in the sheet
-	//Can use now.compare to check if it is the the same date?
-	//May have to reformat the date coming from sheets
+	// Create an iterator to use in for loop
+	i := 1
 
-	//Dummy holder
-	outputString = nextDate.Weekday().String()
+	// Continous loop, durations depend on which day it is
+	if currentTime.Weekday().String() == "Wednesday" {
+		for {
+			if i%2 != 0 { // the case where wednesday was the starting day
+				time.Sleep(wedToSun)
+				sendSunReminder(s, channelID)
+				i++
+			} else {
+				time.Sleep(sunToWed)
+				sendWedReminder(s, channelID)
+				i++
+			}
+		}
+	} else if currentTime.Weekday().String() == "Saturday" { // the case where sunday was the starting day
+		for {
+			if i%2 == 0 {
+				time.Sleep(wedToSun)
+				sendSunReminder(s, channelID)
+				i++
+			} else {
+				time.Sleep(sunToWed)
+				sendWedReminder(s, channelID)
+				i++
+			}
+		}
+	}
+}
 
-	return outputString
+// Sends the sunday reminder message
+func sendSunReminder(s *discordgo.Session, chanID string) {
+	sundayReminderText := "Please send a reminder about the lesson for tomorrow if there is one"
+	_, err := s.ChannelMessageSend(chanID, sundayReminderText)
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+// Sends the Wednesday Reminder message
+func sendWedReminder(s *discordgo.Session, chanID string) error {
+	wednesdayReminderText := "Please send a reminder about the activity if there is one."
+	_, err := s.ChannelMessageSend(chanID, wednesdayReminderText)
+	if err != nil {
+		fmt.Println(err)
+	}
+	return nil
+}
+
+// Function to find the date of the next Activity
+func findNextActivity() time.Time {
+	//Find the next wednesday
+	//Get current day
+	now := time.Now().Local()
+	activityTime := time.Date(now.Year(), now.Month(), now.Day(), 19, 0, 0, 0, now.Location())
+	//Find current weekday
+	weekday := int(now.Weekday())
+	//Default to current day, if it is not a wednesday we will change it
+	nextDate := activityTime
+	//Days before wednesday
+	if weekday < 3 {
+		nextDate = activityTime.AddDate(0, 0, 3-int(weekday))
+	} else if weekday > 3 {
+		nextDate = activityTime.AddDate(0, 0, 10-int(weekday))
+	}
+
+	return nextDate
 }
 
 // Function to find the next lesson information and format it as string
-func findNextLesson() string {
-	var outputString = ""
-	return outputString
+func findNextLesson() time.Time {
+	//Find the next Sunday
+	//Get current day
+	now := time.Now().Local()
+	activityTime := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
+	//Find current weekday
+	weekday := int(now.Weekday())
+	//Default to current day, if it is not a Sunday we will change it
+	nextDate := activityTime
+	//Days before Sunday
+	if weekday < 7 {
+		nextDate = activityTime.AddDate(0, 0, 7-int(weekday))
+	}
+
+	return nextDate
 }
 
 func getJoke() string {

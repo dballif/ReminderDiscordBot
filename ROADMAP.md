@@ -17,3 +17,5 @@ This document is the proposed roadmap for this project. It will be my guide to k
 - !nextSunday chat command - Calculates the date of of the next sunday chat, parses the google sheet, and returns the information - Date, Speaker, Youth in charge
 
 ## Version 3.0
+- Configuration Management
+This will generalize the bot. Instead of being only for Wednesday and Sunday night activities, it can now be for whatever dates and time you want. It will also generalize so that server id and channel and roles can be modified
