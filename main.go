@@ -119,8 +119,12 @@ func initReminders(s *discordgo.Session) {
 	// Channel ID for the channel to be posted in
 	channelID := "1208196655170715698"
 
+	// Secretary Role ID
+	secretaryID := "<@&1212244701697015818>"
+
 	// Wednesday reminder go out 5 hours before
-	wedAnticipation := 5 * time.Hour
+	//wedAnticipation := 5 * time.Hour
+	wedAnticipation := 1298 * time.Minute
 
 	// Sunday reminders go out a day before
 	sunAnticipation := 24 * time.Hour
@@ -142,13 +146,13 @@ func initReminders(s *discordgo.Session) {
 		time.Sleep(wedReminderTime.Sub(currentTime) - wedAnticipation)
 
 		//Send the proper reminder
-		sendWedReminder(s, channelID)
+		sendWedReminder(s, channelID, secretaryID)
 	} else {
 		// Calculate time until next lesson and sleep until then
 		time.Sleep(sunReminderTime.Sub(currentTime) - sunAnticipation)
 
 		// Send the proper reminder
-		sendSunReminder(s, channelID)
+		sendSunReminder(s, channelID, secretaryID)
 
 	}
 
@@ -160,11 +164,11 @@ func initReminders(s *discordgo.Session) {
 		for {
 			if i%2 != 0 { // the case where wednesday was the starting day
 				time.Sleep(wedToSun)
-				sendSunReminder(s, channelID)
+				sendSunReminder(s, channelID, secretaryID)
 				i++
 			} else {
 				time.Sleep(sunToWed)
-				sendWedReminder(s, channelID)
+				sendWedReminder(s, channelID, secretaryID)
 				i++
 			}
 		}
@@ -172,11 +176,11 @@ func initReminders(s *discordgo.Session) {
 		for {
 			if i%2 == 0 {
 				time.Sleep(wedToSun)
-				sendSunReminder(s, channelID)
+				sendSunReminder(s, channelID, secretaryID)
 				i++
 			} else {
 				time.Sleep(sunToWed)
-				sendWedReminder(s, channelID)
+				sendWedReminder(s, channelID, secretaryID)
 				i++
 			}
 		}
@@ -184,8 +188,9 @@ func initReminders(s *discordgo.Session) {
 }
 
 // Sends the sunday reminder message
-func sendSunReminder(s *discordgo.Session, chanID string) {
-	sundayReminderText := "Please send a reminder about the lesson for tomorrow if there is one"
+func sendSunReminder(s *discordgo.Session, chanID string, secRoleID string) {
+
+	sundayReminderText := secRoleID + " Please send a reminder about the lesson for tomorrow if there is one"
 	_, err := s.ChannelMessageSend(chanID, sundayReminderText)
 	if err != nil {
 		fmt.Println(err)
@@ -193,8 +198,8 @@ func sendSunReminder(s *discordgo.Session, chanID string) {
 }
 
 // Sends the Wednesday Reminder message
-func sendWedReminder(s *discordgo.Session, chanID string) error {
-	wednesdayReminderText := "Please send a reminder about the activity if there is one."
+func sendWedReminder(s *discordgo.Session, chanID string, secRoleID string) error {
+	wednesdayReminderText := secRoleID + " Please send a reminder about the activity if there is one."
 	_, err := s.ChannelMessageSend(chanID, wednesdayReminderText)
 	if err != nil {
 		fmt.Println(err)
