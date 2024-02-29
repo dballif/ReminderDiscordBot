@@ -14,7 +14,6 @@ This document is the proposed roadmap for this project. It will be my guide to k
 - Bot parses for Sunday chat and sends reminder to group
 - !nextLesson command - Calculates the next Sunday with a lesson, parses it from the google sheet, and returns the information - Date, Topic, Teacher
 - !nextActivity command - Calculates the next Wednesday, parses the google sheet, and returns the information - Date, Activity, Person in charge
-- !nextSunday chat command - Calculates the date of of the next sunday chat, parses the google sheet, and returns the information - Date, Speaker, Youth in charge
 
 ## Version 3.0
 - Configuration Management
