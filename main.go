@@ -272,7 +272,7 @@ func sendSunReminder(s *discordgo.Session, chanID string, secRoleID string, date
 	// Parse the range to find the right info
 	parsedText := parseSpreadsheet(dateToFind, sheetsService, spreadsheetID, cellRange)
 	// Create the final string
-	sundayReminderText := secRoleID + " Please send a reminder about the lesson for tomorrow if there is one\n" + parsedText
+	sundayReminderText := secRoleID + " Please send a reminder about the lesson for tomorrow if there is one:   " + parsedText
 	//Send the string to the channel
 	_, err := s.ChannelMessageSend(chanID, sundayReminderText)
 	if err != nil {
@@ -285,11 +285,11 @@ func sendWedReminder(s *discordgo.Session, chanID string, secRoleID string, date
 	// Spreadsheet Info
 	spreadsheetID := "10vomq2rhxO-pS664uD9lhLol1nJpfmbxYu8hpfOLJi8"
 	// This points to the sunday cell range
-	cellRange := "Priests!J5:L56"
+	cellRange := "Priests!C5:E56"
 	// Parse the range to find the right info
 	parsedText := parseSpreadsheet(dateToFind, sheetsService, spreadsheetID, cellRange)
 	// Create the final string
-	wednesdayReminderText := secRoleID + " Please send a reminder about the activity if there is one: " + parsedText
+	wednesdayReminderText := secRoleID + " Please send a reminder about the activity if there is one:   " + parsedText
 	//Send the string to the channel
 	_, err := s.ChannelMessageSend(chanID, wednesdayReminderText)
 	if err != nil {
