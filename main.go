@@ -218,13 +218,13 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 	// Find which one is next
 	if wedReminderTime.Before(sunReminderTime) {
-		// Calculate time until next activiy and sleep until then
+		// Calculate time until next activiy anticipation and sleep until then
 		time.Sleep(wedReminderTime.Sub(currentTime) - wedAnticipation)
 
 		//Send the proper reminder
 		sendWedReminder(s, channelID, secretaryID, wedReminderTime, sheetsService)
 	} else {
-		// Calculate time until next lesson and sleep until then
+		// Calculate time until next lesson anticipation and sleep until then
 		time.Sleep(sunReminderTime.Sub(currentTime) - sunAnticipation)
 
 		// Send the proper reminder
@@ -239,11 +239,11 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 	if currentTime.Weekday().String() == "Wednesday" {
 		for {
 			if i%2 != 0 { // the case where wednesday was the starting day
-				time.Sleep(wedToSun)
+				time.Sleep(wedToSun - sunAnticipation)
 				sendSunReminder(s, channelID, secretaryID, sunReminderTime, sheetsService)
 				i++
 			} else {
-				time.Sleep(sunToWed)
+				time.Sleep(sunToWed - wedAnticipation)
 				sendWedReminder(s, channelID, secretaryID, wedReminderTime, sheetsService)
 				i++
 			}
