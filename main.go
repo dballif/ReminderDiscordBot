@@ -165,10 +165,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		eventArray := parseJsonFile(ConfigFile)
 		// Create a variable to hold the string that will be sent
 		var eventListStr string
+		eventListStr += "----------Configured Events----------\n"
 		// Iterate over the entire array
 		for _, event := range eventArray.Events {
-			//FIXME: Neeed to fix the listEvent string to have newlines
-			eventListStr += "Event Name: " + event.Name + 
+			eventListStr += "Event Name: " + event.Name
+			eventListStr += "\n"
 		}
 		// Send the message
 		_, err := s.ChannelMessageSend(m.ChannelID, eventListStr)
