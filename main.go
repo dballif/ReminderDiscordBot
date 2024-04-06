@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -22,40 +21,35 @@ import (
 var (
 	Token       string
 	SheetsToken string
+	ConfigFile  string
 )
 
-// A Struct for grabbing the Joke from a json object returned from API
-type Joke struct {
-	Joke string `json: "joke"`
+// Individual Events
+type ReminderEvent struct {
+	Name             string
+	Weekday          string
+	DiscordChannelId string
+	TagId            string
+	SheetId          string
+	SheetRange       string
+	ReminderText     string
 }
 
-// A struct for parsing the sunday lesson info from a google sheet
-type SundayLesson struct {
-	Date    string
-	Topic   string
-	Teacher string
-}
-
-// A struct for parsing the wednesday activity info from a google sheet
-type WednesdayActivity struct {
-	Date     string
-	Activity string
-	Youth    string
-}
-
-const JokeURL = "https://v2.jokeapi.dev/joke"
+// type Events struct {
+// 	Events []ReminderEvent `json:"events"`
+// }
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&SheetsToken, "s", "", "Sheets Token")
+	flag.StringVar(&ConfigFile, "f", "config.json", "Json Config File")
 	flag.Parse()
 }
 
 // A basic help string
 var helpMessage string = `Commands:
     !help - Display this message
-    !nextActivity - Dispaly info about the next Wednesday night activity
-    !nextLesson -  Display info about the next Sunday Lesson
+	!listEvents - list all the currently configured event reminders
 `
 
 // The global sheets Service ot make it easy to access - This is really only needed by Handler since we can't modify what is given to them
@@ -165,209 +159,64 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			fmt.Println(err)
 		}
 	}
+}
 
-	//nextActivity Command
-	if m.Content == "!nextActivity" {
-		_, err := s.ChannelMessageSend(m.ChannelID, getDateInfo(findNextActivity(), sheetsServiceGlobal))
-		if err != nil {
-			fmt.Println(err)
-		}
+func parseJsonFile(configFile string) ReminderEvent {
+	var reminderEvent ReminderEvent
+
+	// Check if file exists
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		fmt.Println("File does not exist:", configFile)
 	}
 
-	//nextLesson Command
-	if m.Content == "!nextLesson" {
-		_, err := s.ChannelMessageSend(m.ChannelID, getDateInfo(findNextLesson(), sheetsServiceGlobal))
-		if err != nil {
-			fmt.Println(err)
-		}
+	file, err := os.Open(configFile)
+	if err != nil {
+		fmt.Println("Open error")
 	}
 
-	// !joke Command
-	if m.Content == "!joke" {
-		// Try to send the joke
-		_, err := s.ChannelMessageSend(m.ChannelID, getJoke())
-		if err != nil {
-			fmt.Println(err)
-		}
+	jsonData, err := io.ReadAll(file)
+	if err != nil {
+		fmt.Println("Read all error")
 	}
+
+	err = json.Unmarshal(jsonData, &reminderEvent)
+	if err != nil {
+		fmt.Println("unmarshale error")
+	}
+
+	return reminderEvent
 }
 
 func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
-	// Channel ID for the channel to be posted in
-	channelID := "1208196655170715698"
+	//Parse the config file json to find the events to start looking for
+	event := parseJsonFile(ConfigFile)
 
-	// Secretary Role ID
-	secretaryID := "<@&1212244701697015818>"
+	// Calculate time to daily check
+	// FIXME: will eventually be configurable
+	remindTime := time.Date(0, 0, 0, 12, 0, 0, 0, time.Local)
+	timeUntilRemind := time.Until(remindTime)
+	time.Sleep(timeUntilRemind)
 
-	// Wednesday reminder go out 5 hours before
-	wedAnticipation := 5 * time.Hour
-
-	// Sunday reminders go out a day before
-	sunAnticipation := 24 * time.Hour
-
-	// Find the local time for later calculaiton
-	currentTime := time.Now().Local()
-
-	// Find the next lesson and activity
-	wedReminderTime := findNextActivity()
-	sunReminderTime := findNextLesson()
-
-	// Calculate times between activities and lessons
-	wedToSun := sunReminderTime.Sub(wedReminderTime)
-	sunToWed := wedReminderTime.Sub(sunReminderTime)
-
-	// Find which one is next
-	if wedReminderTime.Before(sunReminderTime) {
-		// Calculate time until next activiy and sleep until then
-		time.Sleep(wedReminderTime.Sub(currentTime) - wedAnticipation)
-
-		//Send the proper reminder
-		sendWedReminder(s, channelID, secretaryID, wedReminderTime, sheetsService)
-	} else {
-		// Calculate time until next lesson and sleep until then
-		time.Sleep(sunReminderTime.Sub(currentTime) - sunAnticipation)
-
-		// Send the proper reminder
-		sendSunReminder(s, channelID, secretaryID, sunReminderTime, sheetsService)
-
-	}
-
-	// Create an iterator to use in for loop
-	i := 1
-
-	// Continous loop, durations depend on which day it is
-	if currentTime.Weekday().String() == "Wednesday" {
-		for {
-			if i%2 != 0 { // the case where wednesday was the starting day
-				time.Sleep(wedToSun)
-				sendSunReminder(s, channelID, secretaryID, sunReminderTime, sheetsService)
-				i++
-			} else {
-				time.Sleep(sunToWed)
-				sendWedReminder(s, channelID, secretaryID, wedReminderTime, sheetsService)
-				i++
-			}
-		}
-	} else if currentTime.Weekday().String() == "Saturday" { // the case where sunday was the starting day
-		for {
-			if i%2 == 0 {
-				time.Sleep(wedToSun)
-				sendSunReminder(s, channelID, secretaryID, sunReminderTime, sheetsService)
-				i++
-			} else {
-				time.Sleep(sunToWed)
-				sendWedReminder(s, channelID, secretaryID, wedReminderTime, sheetsService)
-				i++
-			}
+	//Now just loop every 24 hours to check at the same time everyday
+	i := 0
+	daysToRemind := 365
+	for i < daysToRemind {
+		i++
+		// Run through events in config file and check to see if they need a reminder
+		if event.Weekday == time.Now().Weekday().String() {
+			sendReminder(s, event, sheetsService)
 		}
 	}
 }
 
 // Sends the sunday reminder message
-func sendSunReminder(s *discordgo.Session, chanID string, secRoleID string, dateToFind time.Time, sheetsService *sheets.Service) {
-	// Spreadsheet Info
-	spreadsheetID := "10vomq2rhxO-pS664uD9lhLol1nJpfmbxYu8hpfOLJi8"
-	// This points to the sunday cell range
-	cellRange := "Priests!J5:L56"
+func sendReminder(s *discordgo.Session, event ReminderEvent, sheetsService *sheets.Service) {
 	// Parse the range to find the right info
-	parsedText := parseSpreadsheet(dateToFind, sheetsService, spreadsheetID, cellRange)
-	// Create the final string
-	sundayReminderText := secRoleID + " Please send a reminder about the lesson for tomorrow if there is one:   " + parsedText
+	parsedText := parseSpreadsheet(time.Now(), sheetsService, event.SheetId, event.SheetRange)
+	parsedReminderText := event.ReminderText + parsedText
 	//Send the string to the channel
-	_, err := s.ChannelMessageSend(chanID, sundayReminderText)
+	_, err := s.ChannelMessageSend(event.DiscordChannelId, parsedReminderText)
 	if err != nil {
 		fmt.Println(err)
 	}
-}
-
-// Sends the Wednesday Reminder message
-func sendWedReminder(s *discordgo.Session, chanID string, secRoleID string, dateToFind time.Time, sheetsService *sheets.Service) error {
-	// Spreadsheet Info
-	spreadsheetID := "10vomq2rhxO-pS664uD9lhLol1nJpfmbxYu8hpfOLJi8"
-	// This points to the sunday cell range
-	cellRange := "Priests!C5:E56"
-	// Parse the range to find the right info
-	parsedText := parseSpreadsheet(dateToFind, sheetsService, spreadsheetID, cellRange)
-	// Create the final string
-	wednesdayReminderText := secRoleID + " Please send a reminder about the activity if there is one:   " + parsedText
-	//Send the string to the channel
-	_, err := s.ChannelMessageSend(chanID, wednesdayReminderText)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return nil
-}
-
-func getDateInfo(date time.Time, sheetsService *sheets.Service) string {
-	// Spreadsheet Info
-	spreadsheetID := "10vomq2rhxO-pS664uD9lhLol1nJpfmbxYu8hpfOLJi8"
-	//Empty Cell range to fill
-	cellRange := ""
-	// Choose cellRange to parse based on weekday
-	if date.Weekday().String() == "Sunday" {
-		cellRange = "Priests!J5:L56"
-	} else {
-		cellRange = "Priests!C5:E56"
-	}
-	// Parse the range to find the right info
-	return parseSpreadsheet(date, sheetsService, spreadsheetID, cellRange)
-}
-
-// Function to find the date of the next Activity
-func findNextActivity() time.Time {
-	//Find the next wednesday
-	//Get current day
-	now := time.Now().Local()
-	activityTime := time.Date(now.Year(), now.Month(), now.Day(), 19, 0, 0, 0, now.Location())
-	//Find current weekday
-	weekday := int(now.Weekday())
-	//Default to current day, if it is not a wednesday we will change it
-	nextDate := activityTime
-	//Days before wednesday
-	if weekday < 3 {
-		nextDate = activityTime.AddDate(0, 0, 3-int(weekday))
-	} else if weekday > 3 {
-		nextDate = activityTime.AddDate(0, 0, 10-int(weekday))
-	}
-
-	return nextDate
-}
-
-// Function to find the next lesson information and format it as string
-func findNextLesson() time.Time {
-	//Find the next Sunday
-	//Get current day
-	now := time.Now().Local()
-	activityTime := time.Date(now.Year(), now.Month(), now.Day(), 12, 0, 0, 0, now.Location())
-	//Find current weekday
-	weekday := int(now.Weekday())
-	//Default to current day, if it is not a Sunday we will change it
-	nextDate := activityTime
-	//Days before Sunday
-	if weekday < 7 {
-		nextDate = activityTime.AddDate(0, 0, 7-int(weekday))
-	}
-	return nextDate
-}
-
-func getJoke() string {
-	//Call the Joke API and retrieve our cute Dr Who Gopher
-	response, err := http.Get(JokeURL + "/Any?blacklistFlags=nsfw,religious,racist,sexist&type=single")
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer response.Body.Close()
-
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	var jokeData Joke
-	err = json.Unmarshal(body, &jokeData)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	return jokeData.Joke
 }
