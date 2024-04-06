@@ -33,6 +33,7 @@ type ReminderEvent struct {
 	SheetId          string
 	SheetRange       string
 	ReminderText     string
+	DayToEvent       string
 }
 
 type Events struct {
@@ -199,7 +200,7 @@ func parseJsonFile(configFile string) Events {
 
 	err = json.Unmarshal(jsonData, &eventsData)
 	if err != nil {
-		fmt.Println("unmarshale error")
+		fmt.Println("unmarshal error")
 	}
 
 	return eventsData
@@ -211,7 +212,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 	// Calculate time to daily check
 	// FIXME: will eventually be configurable
-	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 8, 36, 0, 0, time.Local)
+	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 13, 15, 0, 0, time.Local)
 
 	// If the target time has already passed today, move it to the next day
 	if time.Now().After(remindTime) {
@@ -222,7 +223,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 	fmt.Println("Time until next remind: " + timeUntilRemind.String())
 	time.Sleep(timeUntilRemind)
 
-	sleepTime := 24 * time.Hour
+	sleepTime := 24 * time.Hour //FIXME: Should probably be configurable
 
 	//Now just loop every 24 hours to check at the same time everyday
 	i := 0
@@ -244,8 +245,18 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 func sendReminder(s *discordgo.Session, event ReminderEvent, sheetsService *sheets.Service) {
 	//FIXME: Adjust the parsedReminderText to tag the person involved
 	//FIXME: Set up actually parsing
+
+	// Convert string form json into int
+	dayUntilremind, errs := strconv.Atoi(event.DayToEvent)
+	if errs != nil {
+		fmt.Println("Conversion to Int error")
+	}
+	// Time until actual event (in hours)
+	dateToFind := time.Duration(24 * dayUntilremind)
+	dateToFind = dateToFind * time.Hour
+
 	// Parse the range to find the right info
-	parsedText := parseSpreadsheet(time.Now().Add(24*time.Hour), sheetsService, event.SheetId, event.SheetRange)
+	parsedText := parseSpreadsheet(time.Now().Add(dateToFind), sheetsService, event.SheetId, event.SheetRange)
 	parsedReminderText := event.TagId + event.ReminderText + " " + parsedText
 	//Send the string to the channel
 	_, err := s.ChannelMessageSend(event.DiscordChannelId, parsedReminderText)
