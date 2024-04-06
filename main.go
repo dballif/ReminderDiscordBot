@@ -193,7 +193,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 	// Calculate time to daily check
 	// FIXME: will eventually be configurable
-	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 34, 40, 0, time.Local)
+	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 12, 0, 0, 0, time.Local)
 
 	// If the target time has already passed today, move it to the next day
 	if time.Now().After(remindTime) {
