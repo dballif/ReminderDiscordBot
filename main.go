@@ -35,9 +35,9 @@ type ReminderEvent struct {
 	ReminderText     string
 }
 
-// type Events struct {
-// 	Events []ReminderEvent `json:"events"`
-// }
+type Events struct {
+	Events []ReminderEvent `json:"events"`
+}
 
 func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
@@ -161,8 +161,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func parseJsonFile(configFile string) ReminderEvent {
-	var reminderEvent ReminderEvent
+func parseJsonFile(configFile string) Events {
+	var eventsData Events
 
 	// Check if file exists
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
@@ -179,33 +179,46 @@ func parseJsonFile(configFile string) ReminderEvent {
 		fmt.Println("Read all error")
 	}
 
-	err = json.Unmarshal(jsonData, &reminderEvent)
+	err = json.Unmarshal(jsonData, &eventsData)
 	if err != nil {
 		fmt.Println("unmarshale error")
 	}
 
-	return reminderEvent
+	return eventsData
 }
 
 func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 	//Parse the config file json to find the events to start looking for
-	event := parseJsonFile(ConfigFile)
+	eventArray := parseJsonFile(ConfigFile)
 
 	// Calculate time to daily check
 	// FIXME: will eventually be configurable
-	remindTime := time.Date(0, 0, 0, 12, 0, 0, 0, time.Local)
+	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 34, 40, 0, time.Local)
+
+	// If the target time has already passed today, move it to the next day
+	if time.Now().After(remindTime) {
+		remindTime = remindTime.Add(24 * time.Hour)
+	}
+
 	timeUntilRemind := time.Until(remindTime)
+	fmt.Println("Time until next remind: " + timeUntilRemind.String())
 	time.Sleep(timeUntilRemind)
+
+	sleepTime := 24 * time.Hour
 
 	//Now just loop every 24 hours to check at the same time everyday
 	i := 0
 	daysToRemind := 365
 	for i < daysToRemind {
 		i++
-		// Run through events in config file and check to see if they need a reminder
-		if event.Weekday == time.Now().Weekday().String() {
-			sendReminder(s, event, sheetsService)
+		for _, event := range eventArray.Events {
+			// Run through events in config file and check to see if they need a reminder
+			if event.Weekday == time.Now().Weekday().String() {
+				fmt.Println("Sending reminder for: " + event.Name)
+				sendReminder(s, event, sheetsService)
+			}
 		}
+		time.Sleep(sleepTime)
 	}
 }
 
