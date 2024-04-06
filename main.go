@@ -212,7 +212,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 	// Calculate time to daily check
 	// FIXME: will eventually be configurable
-	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 13, 15, 0, 0, time.Local)
+	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 14, 00, 0, 0, time.Local)
 
 	// If the target time has already passed today, move it to the next day
 	if time.Now().After(remindTime) {
@@ -244,7 +244,6 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 // Sends the sunday reminder message
 func sendReminder(s *discordgo.Session, event ReminderEvent, sheetsService *sheets.Service) {
 	//FIXME: Adjust the parsedReminderText to tag the person involved
-	//FIXME: Set up actually parsing
 
 	// Convert string form json into int
 	dayUntilremind, errs := strconv.Atoi(event.DayToEvent)
