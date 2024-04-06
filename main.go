@@ -159,6 +159,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			fmt.Println(err)
 		}
 	}
+
+	if m.Content == "!listEvents" {
+		// Parse the JSON for information
+		eventArray := parseJsonFile(ConfigFile)
+		// Create a variable to hold the string that will be sent
+		var eventListStr string
+		// Iterate over the entire array
+		for _, event := range eventArray.Events {
+			//FIXME: Neeed to fix the listEvent string to have newlines
+			eventListStr += "Event Name: " + event.Name + 
+		}
+		// Send the message
+		_, err := s.ChannelMessageSend(m.ChannelID, eventListStr)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
 }
 
 func parseJsonFile(configFile string) Events {
@@ -193,7 +210,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 	// Calculate time to daily check
 	// FIXME: will eventually be configurable
-	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 12, 0, 0, 0, time.Local)
+	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 8, 36, 0, 0, time.Local)
 
 	// If the target time has already passed today, move it to the next day
 	if time.Now().After(remindTime) {
@@ -224,9 +241,11 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 // Sends the sunday reminder message
 func sendReminder(s *discordgo.Session, event ReminderEvent, sheetsService *sheets.Service) {
+	//FIXME: Adjust the parsedReminderText to tag the person involved
+	//FIXME: Set up actually parsing
 	// Parse the range to find the right info
-	parsedText := parseSpreadsheet(time.Now(), sheetsService, event.SheetId, event.SheetRange)
-	parsedReminderText := event.ReminderText + parsedText
+	parsedText := parseSpreadsheet(time.Now().Add(24*time.Hour), sheetsService, event.SheetId, event.SheetRange)
+	parsedReminderText := event.TagId + event.ReminderText + " " + parsedText
 	//Send the string to the channel
 	_, err := s.ChannelMessageSend(event.DiscordChannelId, parsedReminderText)
 	if err != nil {
