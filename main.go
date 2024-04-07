@@ -19,9 +19,10 @@ import (
 
 // Variables used for command line parameters
 var (
-	Token       string
-	SheetsToken string
-	ConfigFile  string
+	Token        string
+	SheetsToken  string
+	ConfigFile   string
+	ReminderHour int
 )
 
 // Individual Events
@@ -44,6 +45,7 @@ func init() {
 	flag.StringVar(&Token, "t", "", "Bot Token")
 	flag.StringVar(&SheetsToken, "s", "", "Sheets Token")
 	flag.StringVar(&ConfigFile, "f", "config.json", "Json Config File")
+	flag.IntVar(&ReminderHour, "r", 12, "Reminder Time (Hour)")
 	flag.Parse()
 }
 
@@ -211,8 +213,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 	eventArray := parseJsonFile(ConfigFile)
 
 	// Calculate time to daily check
-	// FIXME: will eventually be configurable
-	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 14, 00, 0, 0, time.Local)
+	remindTime := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), ReminderHour, 0, 0, 0, time.Local)
 
 	// If the target time has already passed today, move it to the next day
 	if time.Now().After(remindTime) {
@@ -223,7 +224,7 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 	fmt.Println("Time until next remind: " + timeUntilRemind.String())
 	time.Sleep(timeUntilRemind)
 
-	sleepTime := 24 * time.Hour //FIXME: Should probably be configurable
+	sleepTime := 24 * time.Hour
 
 	//Now just loop every 24 hours to check at the same time everyday
 	i := 0
@@ -243,8 +244,6 @@ func initReminders(s *discordgo.Session, sheetsService *sheets.Service) {
 
 // Sends the sunday reminder message
 func sendReminder(s *discordgo.Session, event ReminderEvent, sheetsService *sheets.Service) {
-	//FIXME: Adjust the parsedReminderText to tag the person involved
-
 	// Convert string form json into int
 	dayUntilremind, errs := strconv.Atoi(event.DayToEvent)
 	if errs != nil {
