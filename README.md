@@ -53,14 +53,14 @@ config.json is the json file containing events that the discord channel will rec
 }
 ```
 #### JSON Parameters
-**name**: The name by which the event will be identified.  
-**weekday**: The weekday on which the reminder will be sent out.  
-**discordChannelId**: The ID of the discord channel where the reminder will be sent.  
-**tagId**: The ID of the person/role who will be tagged in the reminder.  
-**sheetId** The Google Sheet ID.  
-**sheetRange**: The Google Sheet range that will be parsed for information.  
-**reminderText**: The text that will be sent prior to the parsed data.  
-**dayToEvent**: The number of days between the reminder day and the day of the actual event. This is important to calculate the correct date that will be looked for while parsing the Google Sheet.  
+`name`: The name by which the event will be identified.  
+`weekday`: The weekday on which the reminder will be sent out.  
+`discordChannelId`: The ID of the discord channel where the reminder will be sent.  
+`tagId`: The ID of the person/role who will be tagged in the reminder.  
+`sheetId` The Google Sheet ID.  
+`sheetRange`: The Google Sheet range that will be parsed for information.  
+`reminderText`: The text that will be sent prior to the parsed data.  
+`dayToEvent`: The number of days between the reminder day and the day of the actual event. This is important to calculate the correct date that will be looked for while parsing the Google Sheet.  
 
 ### Running from src
 You could also just run it from src using go run:
@@ -68,5 +68,16 @@ You could also just run it from src using go run:
 `go run main.go -t $BOT_TOKEN  -s $SHEETS_TOKEN -r 12 -f config.json`
 
 ## Supported Discord Commands:
-** !help ** - Prints a help message
-** !listEvents ** - Prints out the names of all the currently configured reminders
+`!help` - Prints a help message  
+`!listEvents` - Prints out the names of all the currently configured reminders  
+
+## Finding DiscordIDs
+Instructions to find the Discord ID of a role in a discord server:
+1. Go to the Server Settings (Top left drop down on PC)
+2. Select Roles from the Menu (Left Side)
+3. Find the Role in the list (Or create a new one)
+4. Select the "More" button next to that role
+5. Copy ID
+
+## Finding Google Sheets API
+See [the Google Sheets Developer Docs](https://developers.google.com/sheets/api/samples/sheet) for how to find the spreadsheet ID.
