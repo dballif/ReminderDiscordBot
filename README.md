@@ -79,5 +79,8 @@ Instructions to find the Discord ID of a role in a discord server:
 4. Select the "More" button next to that role
 5. Copy ID
 
-## Finding Google Sheets API
-See [the Google Sheets Developer Docs](https://developers.google.com/sheets/api/samples/sheet) for how to find the spreadsheet ID.
+
+
+## Using the Google Sheets API
+See [the Google Cloud Docs](https://developers.google.com/workspace/guides/create-credentials#api-key) for how to setup a Google Sheets API key.  
+See [the Google Sheets Developer Docs](https://developers.google.com/sheets/api/samples/sheet) for how to find the spreadsheet ID.  
