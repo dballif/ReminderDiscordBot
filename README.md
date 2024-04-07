@@ -1,11 +1,14 @@
 # ReminderDiscordBot
 A discord bot that will take events from a config file and send reminders to a discord channel. It can also parse a google sheeet to gather more information about that event.
 
+## Reminder Timing
+Currently, the reminder is sent at the same time for every event. This is on the list of things to change in the future, but for now, it's the same time everyday. The default remind time is 12PM (local to the program running). The remind time must be on the hour. Nothing in between. To change the reminder time, use the "-r" flag accompanied with the hour of the reminder (0-23).
+
 ## Buliding:
 `go build main.go -o ReminderDiscordBot`
 
 ### Usage:
-`./ReminderDiscordBot -t $BOT_TOKEN -s $SHEETS_TOKEN -f config.json`
+`./ReminderDiscordBot -t $BOT_TOKEN -s $SHEETS_TOKEN -r 12 -f config.json`
 
 BOT_TOKEN is the Discord Token that belongs to the bot you have setup and connected to your server. In this case, it is set as an environmental variable, but it could be passed directly to the command line.
 
@@ -62,7 +65,7 @@ config.json is the json file containing events that the discord channel will rec
 ### Running from src
 You could also just run it from src using go run:
 
-`go run main.go -t $BOT_TOKEN  -s $SHEETS_TOKEN -f config.json`
+`go run main.go -t $BOT_TOKEN  -s $SHEETS_TOKEN -r 12 -f config.json`
 
 ## Supported Discord Commands:
 ** !help ** - Prints a help message
