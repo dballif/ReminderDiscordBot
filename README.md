@@ -1,5 +1,5 @@
 # ReminderDiscordBot
-A discord bot that will take events from a config file and send reminders to a discord channel. It can also parse a google sheeet to gather more information about that event.
+A discord bot that will take events from a config file and send reminders to a discord channel. It can also parse a google sheet to gather more information about that event.
 
 ## Reminder Timing
 Currently, the reminder is sent at the same time for every event. This is on the list of things to change in the future, but for now, it's the same time everyday. The default remind time is 12PM (local to the program running). The remind time must be on the hour. Nothing in between. To change the reminder time, use the "-r" flag accompanied with the hour of the reminder (0-23).
